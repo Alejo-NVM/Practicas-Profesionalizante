@@ -1,10 +1,28 @@
 document.addEventListener('DOMContentLoaded', function() {
     cargarClientes();
     cargarProductos();
+    cargarPedidos();
 });
 
 // Mueve la declaración de productosSeleccionados fuera de la función
 const productosSeleccionados = [];
+
+// Función para cargar pedidos desde la API
+async function cargarPedidos() {
+    try {
+        const response = await fetch('http://localhost:3000/api/pedidos');
+        const pedidos = await response.json();
+        
+        const table = document.getElementById('pedidos-tabla');
+        table.innerHTML = ''; // Limpiar la tabla antes de cargar los nuevos pedidos
+
+        pedidos.forEach(pedido => {
+            mostrarPedidoEnTabla(pedido);
+        });
+    } catch (error) {
+        console.error('Error al cargar los pedidos:', error);
+    }
+}
 
 // Doble clic en la tabla de productos para seleccionar
 document.getElementById('stock-table').addEventListener('dblclick', function(event) {
@@ -46,7 +64,7 @@ function updateProductosSeleccionados() {
 }
 
 // Manejo del formulario de pedidos
-document.getElementById('pedido-form').addEventListener('submit', function(event) {
+document.getElementById('pedido-form').addEventListener('submit', async function(event) {
     event.preventDefault();
 
     const clienteId = document.getElementById('cliente').value;
@@ -60,7 +78,7 @@ document.getElementById('pedido-form').addEventListener('submit', function(event
             total += subtotal;
         });
 
-        agregarPedido(clienteId, total, fecha);
+        await agregarPedido(clienteId, total, fecha);
         productosSeleccionados.length = 0; // Limpiar la lista de productos seleccionados
         updateProductosSeleccionados();
         this.reset();
@@ -115,17 +133,22 @@ async function cargarProductos() {
 // Función para agregar el pedido a la API
 async function agregarPedido(clienteId, total, fecha) {
     try {
+        const productosConId = productosSeleccionados.map(producto => ({
+            id: producto.id, // Asegúrate de que aquí estés usando el ID correcto
+            cantidad: producto.cantidad,
+            precio: producto.precio
+        }));
+
         const response = await fetch('http://localhost:3000/api/pedidos', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ clienteId, total, fecha, productos: productosSeleccionados }),
+            body: JSON.stringify({ clienteId, total, fecha, productos: productosConId }),
         });
 
         if (response.ok) {
-            const newPedido = await response.json();
-            mostrarPedidoEnTabla(newPedido, clienteId); // Mostrar el nuevo pedido en la tabla
+            await cargarPedidos(); // Llama a cargarPedidos para refrescar la tabla
         } else {
             console.error('Error al agregar el pedido:', await response.json());
         }
@@ -134,13 +157,83 @@ async function agregarPedido(clienteId, total, fecha) {
     }
 }
 
-// Función para mostrar el pedido en la tabla
-function mostrarPedidoEnTabla(pedido, clienteId) {
-    const table = document.getElementById('pedidos-tabla').querySelector('tbody');
-    const clienteNombre = document.querySelector(`#cliente option[value='${clienteId}']`).textContent; // Obtener el nombre del cliente
+// Modifica esta función para mostrar correctamente los pedidos en la tabla
+function mostrarPedidoEnTabla(pedido) {
+    const table = document.getElementById('pedidos-tabla');
     const newRow = table.insertRow();
-    newRow.insertCell(0).innerText = clienteNombre; // Nombre del cliente
-    newRow.insertCell(1).innerText = pedido.productos.map(p => `${p.nombre} x${p.cantidad}`).join(', '); // Productos en el pedido
-    newRow.insertCell(2).innerText = pedido.total.toFixed(2); // Total del pedido
-    newRow.insertCell(3).innerText = pedido.fecha; // Fecha del pedido
+
+    newRow.insertCell(0).innerText = pedido.Cliente; // Nombre del cliente
+    newRow.insertCell(1).innerText = pedido.Productos || 'Sin productos'; // Mostrar productos del pedido
+    newRow.insertCell(2).innerText = parseFloat(pedido.Total).toFixed(2); // Total del pedido
+    newRow.insertCell(3).innerText = new Date(pedido.Fecha_Entrega).toLocaleDateString(); // Fecha del pedido
+
+    // Agrega la columna de acciones (ej. editar o eliminar)
+    const accionesCell = newRow.insertCell(4);
+    
+    // Botón de eliminar
+    const eliminarBtn = document.createElement('button');
+    eliminarBtn.textContent = 'Eliminar';
+    eliminarBtn.onclick = () => {
+        eliminarPedido(pedido.ID_Pedido);
+    };
+    accionesCell.appendChild(eliminarBtn);
+    
+    // Botón de editar
+    const editarBtn = document.createElement('button');
+    editarBtn.textContent = 'Editar';
+    editarBtn.onclick = () => {
+        editarPedido(pedido); // Llama a la función de editar
+    };
+    accionesCell.appendChild(editarBtn);
+}
+
+// Función para eliminar un pedido
+async function eliminarPedido(pedidoId) {
+    try {
+        const response = await fetch(`http://localhost:3000/api/pedidos/${pedidoId}`, {
+            method: 'DELETE',
+        });
+
+        if (response.ok) {
+            await cargarPedidos(); // Vuelve a cargar la lista de pedidos
+        } else {
+            const error = await response.json();
+            console.error('Error al eliminar pedido:', error);
+        }
+    } catch (error) {
+        console.error('Error en la solicitud para eliminar pedido:', error);
+    }
+}
+
+// Función para editar un pedido
+async function editarPedido(pedido) {
+    const clienteId = prompt("Ingrese el nuevo ID del cliente:", pedido.ClienteID);
+    const fecha = prompt("Ingrese la nueva fecha de entrega:", new Date(pedido.Fecha_Entrega).toISOString().split('T')[0]);
+    
+    // Aquí asumiendo que `productosSeleccionados` se debe actualizar si se va a cambiar los productos del pedido
+    // Por simplicidad, no se está manejando aquí. Puedes implementar la lógica según tu necesidad.
+
+    if (clienteId && fecha) {
+        const total = pedido.Total; // Puedes calcular el nuevo total si cambias los productos
+        
+        try {
+            const response = await fetch(`http://localhost:3000/api/pedidos/${pedido.ID_Pedido}`, {
+                method: 'PUT', // O PATCH, dependiendo de tu API
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ clienteId, total, fecha, productos: pedido.Productos }), // Asegúrate de que sea el formato correcto
+            });
+
+            if (response.ok) {
+                await cargarPedidos(); // Vuelve a cargar la lista de pedidos
+            } else {
+                console.error('Error al editar el pedido:', await response.json());
+            }
+        } catch (error) {
+            console.error('Error en la solicitud para editar pedido:', error);
+        }
+    } else {
+        alert("Por favor, completa todos los campos correctamente.");
+    }
 }
