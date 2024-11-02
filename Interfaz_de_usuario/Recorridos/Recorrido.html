@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Recorridos</title>
+    <link rel="stylesheet" href="recorridos.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Gestión de Recorridos</h1>
+        <div class="main-content">
+            <div class="form-container">
+                <h2>Agregar pedidos</h2>
+                <form id="recorridoForm">
+                    <label for="nombreConductor">Nombre del Conductor:</label>
+                    <input type="text" id="nombreConductor" name="nombreConductor" required>
+                    
+                    <label for="cliente">Cliente:</label>
+                    <input type="text" id="cliente" name="cliente" required>
+                    
+                    <button type="button" id="agregarPedido">Agregar pedido</button>
+                </form>
+                <h3>Dirección del Local (Precargada)</h3>
+                <p id="direccionLocal">Catamarca 332, La Playosa, Córdoba</p>
+                <button id="optimizarRuta">Optimizar Ruta</button>
+            </div>
+            <div class="direcciones-container">
+                <h2>Detalle de pedidos</h2>
+                <ul id="listaClientes"></ul>
+            </div>
+        </div>
+        <div id="map">
+            <!-- Aquí está el iframe del mapa -->
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d13519.62458381776!2d-63.042424303464166!3d-32.09882215564223!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95cc88bba696c17b%3A0x3a270113e4c44bbe!2sLa%20Playosa%2C%20C%C3%B3rdoba!5e0!3m2!1ses!2sar!4v1724191932203!5m2!1ses!2sar" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+        </div>
+    </div>
+    <script src="recorridos.js"></script>
+</body>
+</html>
