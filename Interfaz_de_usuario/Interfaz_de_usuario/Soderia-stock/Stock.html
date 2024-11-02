@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Stock Inteligente - Sodería</title>
+    <link rel="stylesheet" href="Stock.css">
+</head>
+<body>
+    <header>
+        <h1>Gestión de Stock Inteligente</h1>
+    </header>
+
+    <main>
+        <form id="stock-entry-form">
+            <label for="producto-stock">Producto</label>
+            <select id="producto-stock" required>
+                <!-- Las opciones se llenarán desde la API -->
+            </select>
+            
+            <label for="cantidad-stock">Cantidad</label>
+            <input type="number" id="cantidad-stock" required>
+            
+            <button type="submit">Agregar al Stock</button>
+        </form>
+
+        <table id="stock-table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad Disponible</th>
+                    <th>Precio</th>
+                    <th>Fecha Última Salida</th>
+                    <th>Alertas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Datos de stock se llenarán dinámicamente -->
+            </tbody>
+        </table>
+
+<div id="alert-messages"></div>
+
+        <section id="alerts">
+            <h2>Alertas de Stock</h2>
+            <div id="alert-messages"></div>
+        </section>
+    </main>
+    <script src="Stock.js"></script>   
+</body>
+</html>
