@@ -5,24 +5,77 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const form = document.getElementById("pedido-form");
     form.addEventListener("submit", agregarPedido);
+
+    const filtroForm = document.getElementById("filtro-form");
+    filtroForm.addEventListener("submit", filtrarPedidos);  // Agregar manejador para búsqueda
 });
+
+// Función para aplicar el filtro
+async function filtrarPedidos(event) {
+    event.preventDefault();  // Prevenir el envío del formulario
+
+    const cliente = document.getElementById("filtro-cliente").value;
+    const fechaDesde = document.getElementById("filtro-fecha-desde").value;
+    const fechaHasta = document.getElementById("filtro-fecha-hasta").value;
+
+    try {
+        const response = await fetch(`http://localhost:3000/pedidos/filtro?cliente=${cliente}&fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`);
+        const pedidos = await response.json();
+        console.log("Pedidos filtrados:", pedidos);  // Verifica que los datos lleguen correctamente
+
+        const pedidosTable = document.getElementById("pedidos-tabla");
+        pedidosTable.innerHTML = "";  // Limpiar la tabla antes de mostrar los pedidos filtrados
+
+        pedidos.forEach(pedido => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${pedido.Cliente}</td>
+                <td>${pedido.Productos.map(producto => `${producto.nombre} x ${producto.cantidad}`).join("<br>")}</td>
+                <td>$${pedido.Total}</td>
+                <td>${pedido.Fecha}</td>
+                <td><button onclick="cambiarEstadoPedido(${pedido.ID_Pedido})">Marcar como Inactivo</button></td>
+            `;
+            pedidosTable.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error al filtrar pedidos:', error);
+    }
+}
+
 
 // Cargar clientes para el formulario de pedidos
 async function cargarClientes() {
-    const clienteSelect = document.getElementById("cliente");
+    const clienteSelects = document.querySelectorAll("#cliente, #filtro-cliente"); // Seleccionar ambos selects
     try {
         const response = await fetch('http://localhost:3000/clientes');
         const clientes = await response.json();
-        clientes.forEach(cliente => {
-            const option = document.createElement('option');
-            option.value = cliente.ID_Cliente;
-            option.textContent = cliente.Nombre;
-            clienteSelect.appendChild(option);
+
+        clienteSelects.forEach(clienteSelect => {
+            // Agregar la opción "Seleccione un cliente"
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = "Seleccione un cliente";
+            clienteSelect.appendChild(defaultOption);
+
+            clientes.forEach(cliente => {
+                const option = document.createElement('option');
+                option.value = cliente.ID_Cliente;
+                option.textContent = cliente.Nombre;
+                clienteSelect.appendChild(option);
+            });
+
+            // Deshabilitar la opción por defecto después de seleccionar
+            clienteSelect.addEventListener('change', () => {
+                if (clienteSelect.value !== "") {
+                    defaultOption.disabled = true;
+                }
+            });
         });
     } catch (error) {
         console.error('Error al cargar clientes:', error);
     }
 }
+
 
 // Cargar productos disponibles
 async function cargarProductos() {
@@ -116,20 +169,19 @@ async function agregarPedido(event) {
 
 // Cargar pedidos activos
 async function cargarPedidos() {
-    const pedidosTable = document.getElementById("pedidos-tabla");
-    pedidosTable.innerHTML = ""; // Limpiar la tabla antes de recargar
-
     try {
         const response = await fetch('http://localhost:3000/pedidos');
         const pedidos = await response.json();
-        
+        console.log("Pedidos:", pedidos); // Verifica si los datos llegan correctamente
+
+        const pedidosTable = document.getElementById("pedidos-tabla");
+        pedidosTable.innerHTML = ""; // Limpiar la tabla antes de recargar
+
         pedidos.forEach(pedido => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${pedido.Cliente}</td>
-                <td>
-                    ${pedido.Productos.map(producto => `${producto.nombre} x ${producto.cantidad}`).join("<br>")}
-                </td>
+                <td>${pedido.Productos.map(producto => `${producto.nombre} x ${producto.cantidad}`).join("<br>")}</td>
                 <td>$${pedido.Total}</td>
                 <td>${pedido.Fecha}</td>
                 <td><button onclick="cambiarEstadoPedido(${pedido.ID_Pedido})">Marcar como Inactivo</button></td>
@@ -140,7 +192,6 @@ async function cargarPedidos() {
         console.error('Error al cargar pedidos:', error);
     }
 }
-
 
 // Cambiar estado de pedido a "INACTIVO"
 async function cambiarEstadoPedido(id) {

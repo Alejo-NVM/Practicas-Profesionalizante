@@ -205,62 +205,6 @@ app.put('/api/clientes/:id/inactivar', async (req, res) => {
 
 // --------------------------------APARTADO DE PEDIDOS------------------------------
 
-// Endpoint para obtener pedidos con filtro (fecha desde/hasta, cliente, estado)
-app.get('/pedidos/filtro', async (req, res) => {
-    const { fechaDesde, fechaHasta, cliente, estado } = req.query;
-    let query = `
-        SELECT p.ID_Pedido, c.Nombre AS Cliente, DATE_FORMAT(p.Fecha, '%Y-%m-%d') AS Fecha, p.Estado
-        FROM Pedidos p
-        JOIN Clientes c ON p.ID_Cliente = c.ID_Cliente
-        WHERE p.Estado = ?`;
-
-    const params = [estado || 'ACTIVO']; // Por defecto, solo pedidos activos
-
-    if (fechaDesde) {
-        query += ` AND p.Fecha >= ?`;
-        params.push(fechaDesde);
-    }
-
-    if (fechaHasta) {
-        query += ` AND p.Fecha <= ?`;
-        params.push(fechaHasta);
-    }
-
-    if (cliente) {
-        query += ` AND c.Nombre LIKE ?`;
-        params.push(`%${cliente}%`);
-    }
-
-    try {
-        const [pedidos] = await pool.query(query, params);
-
-        // Obtener los productos asociados a cada pedido
-        for (let pedido of pedidos) {
-            const [productos] = await pool.query(
-                `SELECT pr.Nombre, dp.Cantidad, dp.Precio
-                FROM Detalle_Pedido dp
-                JOIN Productos pr ON dp.ID_Producto = pr.ID_Producto
-                WHERE dp.ID_Pedido = ?`, [pedido.ID_Pedido]
-            );
-
-            // Asignar los productos al pedido en el formato adecuado
-            pedido.Productos = productos.map(producto => ({
-                nombre: producto.Nombre,
-                cantidad: producto.Cantidad
-            }));
-
-            // Calcular el total del pedido
-            const total = productos.reduce((acc, producto) => acc + (producto.Cantidad * producto.Precio), 0);
-            pedido.Total = total;
-        }
-
-        res.json(pedidos);
-    } catch (err) {
-        console.error('Error al cargar los pedidos con filtro:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
 // Endpoint para obtener los clientes
 app.get('/clientes', async (req, res) => {
     try {
@@ -358,6 +302,62 @@ app.put('/pedidos/:id', async (req, res) => {
             res.status(404).json({ message: 'Pedido no encontrado' });
         }
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+// Endpoint para obtener pedidos con filtros
+app.get('/pedidos/filtro', async (req, res) => {
+    const { cliente, fechaDesde, fechaHasta } = req.query;
+
+    let query = `
+        SELECT p.ID_Pedido, c.Nombre AS Cliente, DATE_FORMAT(p.Fecha, '%Y-%m-%d') AS Fecha, p.Estado
+        FROM Pedidos p
+        JOIN Clientes c ON p.ID_Cliente = c.ID_Cliente
+        WHERE p.Estado = "ACTIVO"
+    `;
+    let params = [];
+
+    if (cliente) {
+        query += ' AND p.ID_Cliente = ?';
+        params.push(cliente);
+    }
+
+    if (fechaDesde) {
+        query += ' AND p.Fecha >= ?';
+        params.push(fechaDesde);
+    }
+
+    if (fechaHasta) {
+        query += ' AND p.Fecha <= ?';
+        params.push(fechaHasta);
+    }
+
+    try {
+        const [pedidos] = await pool.query(query, params);
+
+        // Obtener los productos asociados a cada pedido
+        for (let pedido of pedidos) {
+            const [productos] = await pool.query(
+                `SELECT pr.Nombre, dp.Cantidad, dp.Precio
+                FROM Detalle_Pedido dp
+                JOIN Productos pr ON dp.ID_Producto = pr.ID_Producto
+                WHERE dp.ID_Pedido = ?`, [pedido.ID_Pedido]
+            );
+
+            // Asignar los productos al pedido en el formato adecuado
+            pedido.Productos = productos.map(producto => ({
+                nombre: producto.Nombre,
+                cantidad: producto.Cantidad
+            }));
+
+            // Calcular el total del pedido
+            const total = productos.reduce((acc, producto) => acc + (producto.Cantidad * producto.Precio), 0);
+            pedido.Total = total;
+        }
+
+        res.json(pedidos);
+    } catch (err) {
+        console.error('Error al cargar los pedidos filtrados:', err);
         res.status(500).json({ error: err.message });
     }
 });
