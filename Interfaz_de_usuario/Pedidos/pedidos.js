@@ -10,37 +10,74 @@ document.addEventListener("DOMContentLoaded", () => {
     filtroForm.addEventListener("submit", filtrarPedidos);  // Agregar manejador para búsqueda
 });
 
+
+// Función para aplicar el filtro
+// Función para aplicar el filtro
 // Función para aplicar el filtro
 async function filtrarPedidos(event) {
     event.preventDefault();  // Prevenir el envío del formulario
 
+    // Obtener las fechas de inicio y fin del formulario
+    const fechaInicio = document.getElementById("filtro-fecha-desde").value;
+    const fechaFin = document.getElementById("filtro-fecha-hasta").value;
+    
+    // Validación de las fechas
+    if (fechaInicio && fechaFin && new Date(fechaFin) < new Date(fechaInicio)) {
+        alert("La fecha de fin no puede ser anterior a la fecha de inicio.");
+        return; // Detener la ejecución de la función si la validación falla
+    }
+
+    // Obtener los demás valores del filtro
     const cliente = document.getElementById("filtro-cliente").value;
-    const fechaDesde = document.getElementById("filtro-fecha-desde").value;
-    const fechaHasta = document.getElementById("filtro-fecha-hasta").value;
 
     try {
-        const response = await fetch(`http://localhost:3000/pedidos/filtro?cliente=${cliente}&fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`);
+        const response = await fetch(`http://localhost:3000/pedidos/filtro?cliente=${cliente}&fechaDesde=${fechaInicio}&fechaHasta=${fechaFin}`);
         const pedidos = await response.json();
         console.log("Pedidos filtrados:", pedidos);  // Verifica que los datos lleguen correctamente
 
         const pedidosTable = document.getElementById("pedidos-tabla");
         pedidosTable.innerHTML = "";  // Limpiar la tabla antes de mostrar los pedidos filtrados
 
-        pedidos.forEach(pedido => {
+        if (pedidos.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${pedido.Cliente}</td>
-                <td>${pedido.Productos.map(producto => `${producto.nombre} x ${producto.cantidad}`).join("<br>")}</td>
-                <td>$${pedido.Total}</td>
-                <td>${pedido.Fecha}</td>
-                <td><button onclick="cambiarEstadoPedido(${pedido.ID_Pedido})">Marcar como Inactivo</button></td>
-            `;
+            row.innerHTML = `<td colspan="5">No se encontraron pedidos con los filtros aplicados.</td>`;
             pedidosTable.appendChild(row);
-        });
+        } else {
+            pedidos.forEach(pedido => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${pedido.Cliente}</td>
+                    <td>${pedido.Productos.map(producto => `${producto.nombre} x ${producto.cantidad}`).join("<br>")}</td>
+                    <td>$${pedido.Total}</td>
+                    <td>${pedido.Fecha}</td>
+                    <td><button onclick="cambiarEstadoPedido(${pedido.ID_Pedido})">Marcar como Inactivo</button></td>
+                `;
+                pedidosTable.appendChild(row);
+            });
+        }
     } catch (error) {
         console.error('Error al filtrar pedidos:', error);
     }
 }
+
+// Función para limpiar los filtros
+function limpiarFiltros() {
+    // Limpiar los campos del formulario
+    document.getElementById("filtro-cliente").value = "";
+    document.getElementById("filtro-fecha-desde").value = "";
+    document.getElementById("filtro-fecha-hasta").value = "";
+
+    // Limpiar la tabla de pedidos
+    const pedidosTable = document.getElementById("pedidos-tabla");
+    pedidosTable.innerHTML = "";  // Limpiar la tabla
+
+    // Recargar todos los pedidos
+    cargarPedidos();  // Esta función carga todos los pedidos sin filtro
+}
+
+// Asignar el evento al botón de limpiar filtros
+document.getElementById("limpiar-filtros").addEventListener("click", limpiarFiltros);
+
 
 
 // Cargar clientes para el formulario de pedidos
