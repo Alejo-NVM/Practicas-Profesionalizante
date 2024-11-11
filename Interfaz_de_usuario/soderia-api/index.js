@@ -1,3 +1,7 @@
+// --------------------------------APARTADO DE CONEXIÓN------------------------------
+
+
+
 const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
@@ -74,17 +78,16 @@ app.post('/api/agregar-stock', async (req, res) => {
     }
 });
 // --------------------------------APARTADO DE CLIENTES------------------------------
-// Endpoint para obtener clientes
+// Endpoint para obtener clientes (solo activos)
 app.get('/api/clientes', async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM Clientes');
+        const [rows] = await pool.query('SELECT * FROM Clientes WHERE Estado = "ACTIVO"');
         res.status(200).json(rows);
     } catch (error) {
         console.error("Error al obtener los clientes:", error);
         res.status(500).json({ error: "Error al obtener los clientes" });
     }
 });
-
 // Endpoint para agregar un nuevo cliente
 app.post('/api/clientes', async (req, res) => {
     const { nombre, email, telefono, direccion, barrio, ciudad } = req.body;
@@ -102,6 +105,41 @@ app.post('/api/clientes', async (req, res) => {
     } catch (error) {
         console.error("Error al agregar cliente:", error);
         res.status(500).json({ error: "Error al agregar cliente" });
+    }
+});
+// Endpoint para buscar clientes por nombre y estado
+app.get('/api/clientes/buscar', async (req, res) => {
+    const { nombre = '', estado = '' } = req.query;  // Si no se pasa estado, se trae todo
+
+    try {
+        // Si estado está vacío, no filtramos por Estado
+        const query = estado ? `
+            SELECT * FROM Clientes WHERE Nombre LIKE ? AND Estado = ?
+        ` : `
+            SELECT * FROM Clientes WHERE Nombre LIKE ?
+        `;
+        
+        const [rows] = await pool.query(query, [`%${nombre}%`, estado].filter(Boolean));  // Eliminar undefined si no hay estado
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error("Error al buscar clientes:", error);
+        res.status(500).json({ error: "Error al buscar clientes" });
+    }
+});
+
+// Endpoint para activar un cliente
+app.put('/api/clientes/:id/activar', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [result] = await pool.query('UPDATE Clientes SET Estado = "ACTIVO" WHERE ID_Cliente = ?', [id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Cliente no encontrado" });
+        }
+        res.status(200).json({ message: "Cliente activado con éxito" });
+    } catch (error) {
+        console.error("Error al activar cliente:", error);
+        res.status(500).json({ error: "Error al activar cliente" });
     }
 });
 
@@ -149,102 +187,182 @@ app.put('/api/clientes/:id', async (req, res) => {
 
 
 
-// Endpoint para eliminar un cliente
-app.delete('/api/clientes/:id', async (req, res) => {
+// Endpoint para cambiar el estado de un cliente a INACTIVO
+app.put('/api/clientes/:id/inactivar', async (req, res) => {
     const { id } = req.params;
 
     try {
-        const [result] = await pool.query('DELETE FROM Clientes WHERE ID_Cliente = ?', [id]);
+        const [result] = await pool.query('UPDATE Clientes SET Estado = "INACTIVO" WHERE ID_Cliente = ?', [id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: "Cliente no encontrado" });
         }
-        res.status(204).send(); 
+        res.status(200).json({ message: "Cliente inactivado con éxito" });
     } catch (error) {
-        console.error("Error al eliminar cliente:", error);
-        res.status(500).json({ error: "Error al eliminar cliente" });
+        console.error("Error al inactivar cliente:", error);
+        res.status(500).json({ error: "Error al inactivar cliente" });
     }
 });
 
 // --------------------------------APARTADO DE PEDIDOS------------------------------
 
-// Endpoint para agregar un nuevo pedido
-app.post('/api/pedidos', async (req, res) => {
-    const { clienteId, total, fecha, productos } = req.body;
+// Endpoint para obtener pedidos con filtro (fecha desde/hasta, cliente, estado)
+app.get('/pedidos/filtro', async (req, res) => {
+    const { fechaDesde, fechaHasta, cliente, estado } = req.query;
+    let query = `
+        SELECT p.ID_Pedido, c.Nombre AS Cliente, DATE_FORMAT(p.Fecha, '%Y-%m-%d') AS Fecha, p.Estado
+        FROM Pedidos p
+        JOIN Clientes c ON p.ID_Cliente = c.ID_Cliente
+        WHERE p.Estado = ?`;
 
-    if (!clienteId || !total || !fecha || !Array.isArray(productos)) {
-        return res.status(400).json({ error: "Datos faltantes o inválidos" });
+    const params = [estado || 'ACTIVO']; // Por defecto, solo pedidos activos
+
+    if (fechaDesde) {
+        query += ` AND p.Fecha >= ?`;
+        params.push(fechaDesde);
+    }
+
+    if (fechaHasta) {
+        query += ` AND p.Fecha <= ?`;
+        params.push(fechaHasta);
+    }
+
+    if (cliente) {
+        query += ` AND c.Nombre LIKE ?`;
+        params.push(`%${cliente}%`);
     }
 
     try {
-        // Insertar el pedido
-        const [result] = await pool.query(
-            'INSERT INTO Pedidos (ID_Cliente, Total, Fecha_Entrega) VALUES (?, ?, ?)',
-            [clienteId, total, fecha]
-        );
-        const nuevoPedidoId = result.insertId;
+        const [pedidos] = await pool.query(query, params);
 
-        // Insertar cada producto en la tabla Detalle_Pedido
-        const detalleQueries = productos.map(producto => {
-            return pool.query(
-                'INSERT INTO Detalle_Pedido (ID_Pedido, ID_Producto, Cantidad, Precio_Unitario) VALUES (?, ?, ?, ?)',
-                [nuevoPedidoId, producto.id, producto.cantidad, producto.precio] // Asegúrate de que se está pasando el ID correcto
+        // Obtener los productos asociados a cada pedido
+        for (let pedido of pedidos) {
+            const [productos] = await pool.query(
+                `SELECT pr.Nombre, dp.Cantidad, dp.Precio
+                FROM Detalle_Pedido dp
+                JOIN Productos pr ON dp.ID_Producto = pr.ID_Producto
+                WHERE dp.ID_Pedido = ?`, [pedido.ID_Pedido]
             );
-        });
-        
-        await Promise.all(detalleQueries);
 
-        // Devolver el nuevo pedido
-        res.status(201).json({
-            id: nuevoPedidoId,
-            clienteId,
-            total,
-            fecha,
-            productos
-        });
-    } catch (error) {
-        console.error("Error al agregar pedido:", error);
-        res.status(500).json({ error: "Error al agregar pedido" });
-    }
-});
+            // Asignar los productos al pedido en el formato adecuado
+            pedido.Productos = productos.map(producto => ({
+                nombre: producto.Nombre,
+                cantidad: producto.Cantidad
+            }));
 
-
-
-
-// Endpoint para obtener todos los pedidos con detalles de productos
-app.get('/api/pedidos', async (req, res) => {
-    try {
-        const [rows] = await pool.query(`
-            SELECT P.ID_Pedido, C.Nombre AS Cliente, P.Total, P.Fecha_Entrega, 
-                   GROUP_CONCAT(CONCAT(DP.Cantidad, ' x ', PR.Nombre) SEPARATOR ', ') AS Productos
-            FROM Pedidos P
-            JOIN Clientes C ON P.ID_Cliente = C.ID_Cliente
-            LEFT JOIN Detalle_Pedido DP ON P.ID_Pedido = DP.ID_Pedido
-            LEFT JOIN Productos PR ON DP.ID_Producto = PR.ID_Producto
-            GROUP BY P.ID_Pedido, C.Nombre, P.Total, P.Fecha_Entrega
-        `);
-        res.status(200).json(rows);
-    } catch (error) {
-        console.error("Error al obtener pedidos:", error);
-        res.status(500).json({ error: "Error al obtener pedidos" });
-    }
-});
-
-
-// Endpoint para eliminar un pedido
-app.delete('/api/pedidos/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const [result] = await pool.query('DELETE FROM Pedidos WHERE ID_Pedido = ?', [id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "Pedido no encontrado" });
+            // Calcular el total del pedido
+            const total = productos.reduce((acc, producto) => acc + (producto.Cantidad * producto.Precio), 0);
+            pedido.Total = total;
         }
-        res.status(204).send(); 
-    } catch (error) {
-        console.error("Error al eliminar pedido:", error);
-        res.status(500).json({ error: "Error al eliminar pedido" });
+
+        res.json(pedidos);
+    } catch (err) {
+        console.error('Error al cargar los pedidos con filtro:', err);
+        res.status(500).json({ error: err.message });
     }
 });
+
+// Endpoint para obtener los clientes
+app.get('/clientes', async (req, res) => {
+    try {
+        const [clientes] = await pool.query('SELECT * FROM Clientes WHERE Estado = "ACTIVO"');
+        res.json(clientes);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener los productos
+app.get('/productos', async (req, res) => {
+    try {
+        const [productos] = await pool.query('SELECT * FROM Productos WHERE Stock > 0');
+        res.json(productos);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para agregar un pedido
+app.post('/pedidos', async (req, res) => {
+    const { cliente, productos, fecha } = req.body;
+    try {
+        // Crear el pedido
+        const [pedidoResult] = await pool.query(
+            'INSERT INTO Pedidos (ID_Cliente, Fecha, Estado) VALUES (?, ?, ?)',
+            [cliente, fecha, 'ACTIVO']
+        );
+        const idPedido = pedidoResult.insertId;
+
+        // Agregar los productos al detalle del pedido
+        for (let producto of productos) {
+            await pool.query(
+                'INSERT INTO Detalle_Pedido (ID_Pedido, ID_Producto, Cantidad, Precio) VALUES (?, ?, ?, ?)',
+                [idPedido, producto.id, producto.cantidad, producto.precio]
+            );
+        }
+
+        res.status(201).json({ message: 'Pedido agregado con éxito' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint para obtener los pedidos
+app.get('/pedidos', async (req, res) => {
+    try {
+        const [pedidos] = await pool.query(
+            `SELECT p.ID_Pedido, c.Nombre AS Cliente, DATE_FORMAT(p.Fecha, '%Y-%m-%d') AS Fecha, p.Estado
+            FROM Pedidos p
+            JOIN Clientes c ON p.ID_Cliente = c.ID_Cliente
+            WHERE p.Estado = "ACTIVO"`
+        );
+
+        // Obtener los productos asociados a cada pedido
+        for (let pedido of pedidos) {
+            const [productos] = await pool.query(
+                `SELECT pr.Nombre, dp.Cantidad, dp.Precio
+                FROM Detalle_Pedido dp
+                JOIN Productos pr ON dp.ID_Producto = pr.ID_Producto
+                WHERE dp.ID_Pedido = ?`, [pedido.ID_Pedido]
+            );
+
+            // Asignar los productos al pedido en el formato adecuado
+            pedido.Productos = productos.map(producto => ({
+                nombre: producto.Nombre,
+                cantidad: producto.Cantidad
+            }));
+
+            // Calcular el total del pedido
+            const total = productos.reduce((acc, producto) => acc + (producto.Cantidad * producto.Precio), 0);
+            pedido.Total = total;
+        }
+
+        res.json(pedidos);
+    } catch (err) {
+        console.error('Error al cargar los pedidos:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// Endpoint para cambiar el estado de un pedido a "INACTIVO"
+app.put('/pedidos/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [result] = await pool.query(
+            'UPDATE Pedidos SET Estado = "INACTIVO" WHERE ID_Pedido = ?',
+            [id]
+        );
+        if (result.affectedRows > 0) {
+            res.json({ message: 'Estado del pedido actualizado a INACTIVO' });
+        } else {
+            res.status(404).json({ message: 'Pedido no encontrado' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 
 // --------------------------------APARTADO DE Detalle_Pedido------------------------------
 app.get('/api/detalle-pedidos', async (req, res) => {
@@ -257,7 +375,6 @@ app.get('/api/detalle-pedidos', async (req, res) => {
     }
 });
 
-// --------------------------------APARTADO DE CONEXIÓN------------------------------
 // Inicia el servidor
 app.listen(3000, () => {
     console.log('Servidor corriendo en el puerto 3000');

@@ -8,6 +8,7 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    cursor: url('../botella.png'), auto;
 }
 
 .container {
@@ -17,6 +18,7 @@ body {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     width: 90%;
     max-width: 900px;
+    cursor: url('../botella.png'), auto;
 }
 
 /* Estilo del encabezado */
@@ -25,6 +27,7 @@ h1 {
     font-size: 2.5rem;
     color: #01579b; /* Azul oscuro */
     margin-bottom: 20px;
+    cursor: url('../botella.png'), auto;
 }
 
 /* Estilo de la sección de formularios */
@@ -33,6 +36,7 @@ h1 {
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
+    cursor: url('../botella.png'), auto;
 }
 
 .form-section h2 {
@@ -40,22 +44,27 @@ h1 {
     margin-bottom: 15px;
 }
 
+/* Estilo de etiquetas */
 label {
     display: block;
     margin-bottom: 8px;
     color: #0277bd; /* Azul intermedio */
+    cursor: url('../botella.png'), auto;
 }
 
+/* Estilo de select e input */
 select, input {
-    width: 102%;
+    width: 100%; /* Ajustado para evitar desbordamientos */
     padding: 10px;
     margin-bottom: 15px;
     border: 2px solid #81d4fa; /* Borde celeste */
     border-radius: 5px;
     background-color: #e1f5fe; /* Fondo muy claro */
     box-sizing: border-box; /* Incluye el borde y padding en el ancho total */
+    cursor: url('../botella.png'), auto;
 }
 
+/* Estilo de botones */
 button {
     display: inline-block;
     padding: 10px 20px;
@@ -65,6 +74,7 @@ button {
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+    cursor: url('../botella1.png'), auto;
 }
 
 button:hover {
@@ -83,6 +93,7 @@ button:hover {
     margin-bottom: 15px;
 }
 
+/* Estilo de las tablas */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -105,6 +116,7 @@ th {
     color: #01579b; /* Azul oscuro */
 }
 
+/* Estilo de botones de eliminación */
 button.delete-btn {
     background-color: #e53935; /* Rojo */
     color: white;
@@ -115,6 +127,7 @@ button.delete-btn {
 button.delete-btn:hover {
     background-color: #d32f2f; /* Rojo más oscuro */
 }
+
 /* Estilo del modal */
 .modal {
     display: none; /* Oculto por defecto */
@@ -155,3 +168,9 @@ button.delete-btn:hover {
 .modal-content button:hover {
     background-color: #0277bd; /* Azul más oscuro */
 }
+
+
+
+
+
+

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Pedidos</title>
     <link rel="stylesheet" href="pedidos.css">
-    <script src="pedidos.js" defer></script>
+    
 </head>
 <body>
     <div class="container">
@@ -30,8 +30,8 @@
                             <th>Stock</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- Los productos se cargarán dinámicamente aquí -->
+                    <tbody id="productos-tabla">
+                        <!-- Los productos se agregarán aquí dinámicamente -->
                     </tbody>
                 </table>
 
@@ -62,5 +62,6 @@
             </table>
         </div>
     </div>
+    <script src="pedidos.js"></script>
 </body>
 </html>
