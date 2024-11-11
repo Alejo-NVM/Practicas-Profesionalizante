@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Pedidos</title>
     <link rel="stylesheet" href="pedidos.css">
-    
 </head>
 <body>
     <div class="container">
@@ -15,12 +14,11 @@
             <form id="pedido-form">
                 <label for="cliente">Cliente</label>
                 <select id="cliente" required>
-                    <!-- Los clientes se cargarán dinámicamente aquí -->
+               
                 </select>
 
                 <label for="fecha">Fecha de Entrega</label>
                 <input type="date" id="fecha" min="{{ new Date().toISOString().split('T')[0] }}">
-
 
                 <h3>Productos Disponibles</h3>
                 <table id="stock-table">
@@ -28,17 +26,17 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Precio</th>
-                            <th>Stock</th>
+                            <th>Acción</th> 
                         </tr>
                     </thead>
                     <tbody id="productos-tabla">
-                        <!-- Los productos se agregarán aquí dinámicamente -->
+                     
                     </tbody>
                 </table>
 
                 <h3>Productos Seleccionados</h3>
                 <ul id="productos-seleccionados">
-                    <!-- Los productos seleccionados se añadirán aquí -->
+                
                 </ul>
 
                 <button type="submit">Agregar Pedido</button>
@@ -49,7 +47,7 @@
             <form id="filtro-form">
                 <label for="filtro-cliente">Cliente</label>
                 <select id="filtro-cliente">
-                    <!-- Los clientes se cargarán dinámicamente aquí -->
+                   
                 </select>
             
                 <label for="filtro-fecha-desde">Fecha Inicio</label>
@@ -60,12 +58,9 @@
             
                 <button type="submit">Buscar</button>
                 <button id="limpiar-filtros" type="button">Limpiar Filtros</button>
-
             </form>
-            
         </div>
-        
-        
+
         <div class="pedidos-lista">
             <h2>Pedidos Actuales</h2>
             <table>
@@ -79,7 +74,7 @@
                     </tr>
                 </thead>
                 <tbody id="pedidos-tabla">
-                    <!-- Los pedidos se añadirán aquí -->
+                    
                 </tbody>
             </table>
         </div>

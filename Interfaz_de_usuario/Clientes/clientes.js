@@ -1,3 +1,15 @@
+document.addEventListener('DOMContentLoaded', function() {
+    const username = localStorage.getItem('username');
+    const password = localStorage.getItem('password'); 
+    if (!username || !password) {
+        
+        window.location.href = '../error.html';  
+        return;  
+    }
+
+   
+    loadClientes();
+});
 // Función para cargar clientes desde la API
 function loadClientes() {
     fetch('http://localhost:3000/api/clientes')
@@ -26,7 +38,7 @@ document.getElementById('cliente-form').addEventListener('submit', function(even
     const editingId = form.dataset.editingId;
 
     if (editingId) {
-        // Actualizar cliente existente
+      
         fetch(`http://localhost:3000/api/clientes/${editingId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -46,7 +58,7 @@ document.getElementById('cliente-form').addEventListener('submit', function(even
         .catch(error => console.error('Error al actualizar cliente:', error));
 
     } else {
-        // Agregar nuevo cliente
+     
         fetch('http://localhost:3000/api/clientes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -68,6 +80,8 @@ window.addEventListener('load', function () {
     loadClientes(); 
 });
 
+
+
 // Función para agregar una nueva fila
 function addRow(cliente) {
     const table = document.getElementById('clientes-tabla');
@@ -81,34 +95,43 @@ function addRow(cliente) {
     newRow.insertCell(4).innerText = cliente.Barrio; 
     newRow.insertCell(5).innerText = cliente.Ciudad;
     const actionsCell = newRow.insertCell(6);
-    createDeleteButton(actionsCell, cliente.ID_Cliente);
-    createEditButton(actionsCell, newRow, cliente);
+
+   
+    if (cliente.Estado === 'ACTIVO') {
+        createDeleteButton(actionsCell, cliente.ID_Cliente); 
+    } else if (cliente.Estado === 'INACTIVO') {
+        createActivateButton(actionsCell, cliente.ID_Cliente); 
+    }
+
+    createEditButton(actionsCell, newRow, cliente); 
 }
 
-// Función para crear el botón de eliminar
+
+// Función para crear el botón de inactivar
 function createDeleteButton(actionsCell, clienteId) {
     const deleteButton = document.createElement('button');
-    deleteButton.innerText = 'Eliminar';
+    deleteButton.innerText = 'Inactivar';
     deleteButton.classList.add('delete-btn');
     deleteButton.addEventListener('click', function() {
-        const confirmDelete = confirm('¿Estás seguro de que deseas eliminar este cliente?');
+        const confirmDelete = confirm('¿Estás seguro de que deseas inactivar este cliente?');
         if (confirmDelete) {
-            fetch(`http://localhost:3000/api/clientes/${clienteId}`, {
-                method: 'DELETE',
+            fetch(`http://localhost:3000/api/clientes/${clienteId}/inactivar`, {
+                method: 'PUT',
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error al inactivar cliente');
+                return response.json();
             })
             .then(() => {
-                const rowToDelete = document.querySelector(`tr[data-id="${clienteId}"]`);
-                if (rowToDelete) {
-                    rowToDelete.remove(); 
-                    loadClientes(); 
-                }
-                alert('Cliente eliminado con éxito.'); 
+                loadClientes(); 
+                alert('Cliente inactivado con éxito.');
             })
-            .catch(error => console.error('Error al eliminar cliente:', error));
+            .catch(error => console.error('Error al inactivar cliente:', error));
         }
     });
     actionsCell.appendChild(deleteButton);
 }
+
 
 // Función para crear el botón de editar
 function createEditButton(actionsCell, row, cliente) {
@@ -126,4 +149,42 @@ function createEditButton(actionsCell, row, cliente) {
         document.querySelector("button[type='submit']").innerText = 'Guardar Cliente';
     });
     actionsCell.appendChild(editButton);
+}
+document.getElementById('buscar-clientes-btn').addEventListener('click', function() {
+    const nombre = document.getElementById('busqueda-nombre').value.trim();
+    const verInactivos = document.getElementById('ver-inactivos').checked;
+    const estado = verInactivos ? '' : 'ACTIVO';  
+
+    const url = `http://localhost:3000/api/clientes/buscar?nombre=${encodeURIComponent(nombre)}&estado=${estado}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const table = document.getElementById('clientes-tabla');
+            table.innerHTML = ''; 
+            
+            data.forEach(addRow); 
+        })
+        .catch(error => console.error('Error al buscar clientes:', error));
+});
+
+function createActivateButton(actionsCell, clienteId) {
+    const activateButton = document.createElement('button');
+    activateButton.innerText = 'Activar';
+    activateButton.classList.add('activate-btn');
+    activateButton.addEventListener('click', function() {
+        fetch(`http://localhost:3000/api/clientes/${clienteId}/activar`, {
+            method: 'PUT',
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Error al activar cliente');
+            return response.json();
+        })
+        .then(() => {
+            loadClientes(); 
+            alert('Cliente activado con éxito.');
+        })
+        .catch(error => console.error('Error al activar cliente:', error));
+    });
+    actionsCell.appendChild(activateButton);
 }

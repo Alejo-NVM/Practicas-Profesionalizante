@@ -186,3 +186,18 @@ tr.editing {
         font-size: 0.8rem;
     }
 }
+.busqueda-clientes label {
+    display: inline; 
+    align-items: center; 
+    color: #0277bd;
+    font-size: 1rem; 
+}
+
+.busqueda-clientes input[type="checkbox"] {
+    margin-left: -550px; 
+    vertical-align: middle; 
+    margin-right: -550px;
+    margin-top: 10px;
+}
+
+

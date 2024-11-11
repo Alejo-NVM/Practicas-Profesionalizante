@@ -11,7 +11,7 @@
         <h1>Gestión de Clientes</h1>
         <div class="content">
             <div class="form-section">
-                <h2>Agregar Nuevo Cliente</h2>
+                <h2>Agregar/Guardar Cliente</h2>
                 <form id="cliente-form">
                     <label for="nombre">Nombre:</label>
                     <input type="text" id="nombre" name="nombre" required>
@@ -26,11 +26,10 @@
                     <input type="text" id="direccion" name="direccion" required>
 
                     <label for="barrio">Barrio:</label>
-    <input type="text" id="barrio" name="barrio" required>
+                    <input type="text" id="barrio" name="barrio" required>
     
-    <label for="ciudad">Ciudad:</label>
-<input type="text" id="ciudad" name="ciudad" required>
-
+                    <label for="ciudad">Ciudad:</label>
+                    <input type="text" id="ciudad" name="ciudad" required>
 
                     <button type="submit">Agregar Cliente</button>
                 </form>
@@ -48,15 +47,26 @@
                             <th>Barrio</th>
                             <th>Ciudad</th>
                             <th>Acciones</th>
-                            
                         </tr>
                     </thead>
-                    <tbody id="clientes-tabla">
-                       
-                    </tbody>
+                    <tbody id="clientes-tabla"></tbody>
                 </table>
             </div>
+            
         </div>
+        <div class="busqueda-clientes">
+            <h2>Búsqueda de Clientes</h2>
+            <input type="text" id="busqueda-nombre" placeholder="Buscar por nombre">
+            <label for="ver-inactivos">
+                Permitir ver inactivos
+                <input type="checkbox" id="ver-inactivos">
+            </label>
+            <button id="buscar-clientes-btn">Buscar</button>
+        </div>
+        
+        
+        
+        
     </div>
     <script src="clientes.js"></script>
 </body>

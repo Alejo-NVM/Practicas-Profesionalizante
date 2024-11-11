@@ -229,14 +229,12 @@ app.get('/productos', async (req, res) => {
 app.post('/pedidos', async (req, res) => {
     const { cliente, productos, fecha } = req.body;
     try {
-        // Crear el pedido
         const [pedidoResult] = await pool.query(
             'INSERT INTO Pedidos (ID_Cliente, Fecha, Estado) VALUES (?, ?, ?)',
             [cliente, fecha, 'ACTIVO']
         );
         const idPedido = pedidoResult.insertId;
 
-        // Agregar los productos al detalle del pedido
         for (let producto of productos) {
             await pool.query(
                 'INSERT INTO Detalle_Pedido (ID_Pedido, ID_Producto, Cantidad, Precio) VALUES (?, ?, ?, ?)',
@@ -260,7 +258,6 @@ app.get('/pedidos', async (req, res) => {
             WHERE p.Estado = "ACTIVO"`
         );
 
-        // Obtener los productos asociados a cada pedido
         for (let pedido of pedidos) {
             const [productos] = await pool.query(
                 `SELECT pr.Nombre, dp.Cantidad, dp.Precio
@@ -269,13 +266,11 @@ app.get('/pedidos', async (req, res) => {
                 WHERE dp.ID_Pedido = ?`, [pedido.ID_Pedido]
             );
 
-            // Asignar los productos al pedido en el formato adecuado
             pedido.Productos = productos.map(producto => ({
                 nombre: producto.Nombre,
                 cantidad: producto.Cantidad
             }));
 
-            // Calcular el total del pedido
             const total = productos.reduce((acc, producto) => acc + (producto.Cantidad * producto.Precio), 0);
             pedido.Total = total;
         }
@@ -335,7 +330,6 @@ app.get('/pedidos/filtro', async (req, res) => {
     try {
         const [pedidos] = await pool.query(query, params);
 
-        // Obtener los productos asociados a cada pedido
         for (let pedido of pedidos) {
             const [productos] = await pool.query(
                 `SELECT pr.Nombre, dp.Cantidad, dp.Precio
@@ -344,13 +338,13 @@ app.get('/pedidos/filtro', async (req, res) => {
                 WHERE dp.ID_Pedido = ?`, [pedido.ID_Pedido]
             );
 
-            // Asignar los productos al pedido en el formato adecuado
+
             pedido.Productos = productos.map(producto => ({
                 nombre: producto.Nombre,
                 cantidad: producto.Cantidad
             }));
 
-            // Calcular el total del pedido
+
             const total = productos.reduce((acc, producto) => acc + (producto.Cantidad * producto.Precio), 0);
             pedido.Total = total;
         }
